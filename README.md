@@ -39,3 +39,9 @@ Use o `Dockerfile` da raiz do projeto como build.
 	- `DEFAULT_WEBHOOK_URL=http://seu-webhook:porta/webhook/generate_page`
 
 Se quiser que a pasta gerada fique no volume persistente por fora também, use o mesmo caminho no host e dentro do container para simplificar backup.
+
+### Template pronto
+
+Se o painel aceitar Docker Compose, importe o arquivo [docker-compose.yml](docker-compose.yml) e use a variável `DEFAULT_WEBHOOK_URL` no ambiente.
+
+Se preferir deploy por Dockerfile, o comportamento é o mesmo, só apontar a raiz do repositório e usar o [Dockerfile](Dockerfile).
