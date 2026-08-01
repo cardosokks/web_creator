@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Gerador de Páginas — Painel</title>
     <link href="/static/style.css" rel="stylesheet">
+    <link href="/static/modifications.css" rel="stylesheet">
   </head>
   <body>
     <main class="app-shell">
@@ -40,6 +41,25 @@
       </header>
 
       <section class="panel panel--form">
+        <div class="panel-header">
+          <div>
+            <h2>Webhooks Salvos</h2>
+            <p>Adicione, remova e selecione webhooks para usar na geração.</p>
+          </div>
+        </div>
+        <form id="addWebhookForm" class="form-grid">
+          <div class="field field--wide">
+            <label class="form-label" for="newWebhookUrl">Nova URL de Webhook</label>
+            <input id="newWebhookUrl" class="form-control" placeholder="https://seu-webhook.com/api/generate" autocomplete="off">
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-secondary">Adicionar Webhook</button>
+          </div>
+        </form>
+        <div id="webhookList" class="webhook-list"></div>
+      </section>
+
+      <section class="panel panel--form">
         <div class="panel-header panel-header--stacked">
           <div>
             <h2>Nova geração</h2>
@@ -51,7 +71,7 @@
         <form id="generateForm" class="form-grid">
           <div class="field field--wide">
             <label class="form-label" for="url">URL do webhook</label>
-            <input id="url" class="form-control" value="{{ default_webhook_url | e }}" autocomplete="off">
+            <select id="url" class="form-control"></select>
           </div>
           <div class="field field--wide">
             <label class="form-label" for="query">Prompt / query</label>
@@ -126,6 +146,100 @@
       let currentJobsCount = 0;
       let currentPagesCount = 0;
       let lastActiveJobsSignature = '';
+
+      // --- Webhook Management ---
+      const WEBHOOK_URLS_KEY = 'webhookUrls';
+      const defaultWebhookUrl = "{{ default_webhook_url | e }}";
+      const webhookUrlSelect = document.getElementById('url');
+      const webhookListContainer = document.getElementById('webhookList');
+      const addWebhookForm = document.getElementById('addWebhookForm');
+      const newWebhookUrlInput = document.getElementById('newWebhookUrl');
+
+      function getWebhookUrls() {
+        const stored = localStorage.getItem(WEBHOOK_URLS_KEY);
+        if (stored) {
+          return JSON.parse(stored);
+        }
+        // If nothing is stored, initialize with the default URL from the server
+        return defaultWebhookUrl ? [defaultWebhookUrl] : [];
+      }
+
+      function saveWebhookUrls(urls) {
+        localStorage.setItem(WEBHOOK_URLS_KEY, JSON.stringify(urls));
+      }
+
+      function renderWebhooks() {
+        const urls = getWebhookUrls();
+        // Render the list for management
+        webhookListContainer.innerHTML = '';
+        if (urls.length === 0) {
+          webhookListContainer.innerHTML = '<p class="webhook-list-empty">Nenhuma URL de webhook salva.</p>';
+        } else {
+          urls.forEach(url => {
+            const item = document.createElement('div');
+            item.className = 'webhook-list-item';
+            
+            const urlSpan = document.createElement('span');
+            urlSpan.textContent = url;
+            item.appendChild(urlSpan);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = 'Excluir';
+            deleteBtn.className = 'btn btn-danger btn-sm';
+            deleteBtn.type = 'button';
+            deleteBtn.addEventListener('click', () => {
+              if (confirm('Tem certeza que deseja excluir esta URL de webhook?')) {
+                deleteWebhookUrl(url);
+              }
+            });
+            item.appendChild(deleteBtn);
+            webhookListContainer.appendChild(item);
+          });
+        }
+
+        // Render the select dropdown for the form
+        webhookUrlSelect.innerHTML = '';
+        if (urls.length === 0) {
+          const option = document.createElement('option');
+          option.value = '';
+          option.textContent = 'Adicione uma URL de webhook abaixo';
+          option.disabled = true;
+          webhookUrlSelect.appendChild(option);
+        } else {
+          urls.forEach(url => {
+            const option = document.createElement('option');
+            option.value = url;
+            option.textContent = url;
+            webhookUrlSelect.appendChild(option);
+          });
+        }
+      }
+
+      function addWebhookUrl(url) {
+        const urls = getWebhookUrls();
+        if (url && !urls.includes(url)) {
+          urls.push(url);
+          saveWebhookUrls(urls);
+          renderWebhooks();
+        }
+      }
+
+      function deleteWebhookUrl(urlToDelete) {
+        let urls = getWebhookUrls();
+        urls = urls.filter(url => url !== urlToDelete);
+        saveWebhookUrls(urls);
+        renderWebhooks();
+      }
+
+      addWebhookForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const newUrl = newWebhookUrlInput.value.trim();
+        if (newUrl) {
+          addWebhookUrl(newUrl);
+          newWebhookUrlInput.value = '';
+        }
+      });
+      // --- End Webhook Management ---
 
       function setEmptyState(container, title, description) {
         const state = document.createElement('div');
@@ -451,7 +565,9 @@
           if (data.ok) {
             await loadJobs();
             await loadPages();
-            e.target.reset();
+            document.getElementById('query').value = '';
+            document.getElementById('page_name').value = '';
+            document.getElementById('folder_name').value = '';
             updatePreview();
           } else {
             alert(data.error || 'Erro ao enviar job');
@@ -573,7 +689,15 @@
         updatePanelMeta({ ok: true });
       }
 
-      setInterval(refreshJobsOnly, 6000);
+      // Initial Load
+      document.addEventListener('DOMContentLoaded', () => {
+        renderWebhooks();
+        updatePreview();
+        loadPages();
+        refreshJobsOnly();
+        setInterval(refreshJobsOnly, 6000);
+      });
+
       document.getElementById('refreshBtn').addEventListener('click', async () => {
         await loadJobs();
         await loadPages();
@@ -581,9 +705,6 @@
         updatePanelMeta({ ok: true });
       });
 
-      updatePreview();
-      loadPages();
-      refreshJobsOnly();
     </script>
   </body>
 </html>
