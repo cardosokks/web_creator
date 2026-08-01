@@ -142,27 +142,110 @@
         container.appendChild(state);
       }
 
-      function buildPreviewFrame(pageName) {
-        const wrapper = document.createElement('div');
+      function hashToHue(value) {
+        let hash = 0;
+        const source = value || 'pagina';
+        for (let index = 0; index < source.length; index += 1) {
+          hash = (hash * 31 + source.charCodeAt(index)) >>> 0;
+        }
+        return hash % 360;
+      }
+
+      function createTag(label, value) {
+        const tag = document.createElement('div');
+        tag.className = 'page-card__tag';
+
+        const tagLabel = document.createElement('span');
+        tagLabel.className = 'page-card__tag-label';
+        tagLabel.textContent = label;
+
+        const tagValue = document.createElement('strong');
+        tagValue.className = 'page-card__tag-value';
+        tagValue.textContent = value;
+
+        tag.appendChild(tagLabel);
+        tag.appendChild(tagValue);
+        return tag;
+      }
+
+      function createPreviewArt(page) {
+        const wrapper = document.createElement('button');
         wrapper.className = 'page-card__preview';
+        wrapper.type = 'button';
+        wrapper.style.setProperty('--accent-hue', String(hashToHue(page.name)));
+        wrapper.setAttribute('aria-label', 'Abrir preview de ' + (page.name || 'Página'));
+        wrapper.addEventListener('click', () => openPagePreview(page.name));
 
-        wrapper.addEventListener('click', () => openPagePreview(pageName));
+        const shell = document.createElement('div');
+        shell.className = 'page-card__preview-shell';
 
-        const monitor = document.createElement('div');
-        monitor.className = 'page-card__monitor';
+        const chrome = document.createElement('div');
+        chrome.className = 'page-card__preview-chrome';
 
-        const screen = document.createElement('div');
-        screen.className = 'page-card__monitor-screen';
+        const dots = document.createElement('div');
+        dots.className = 'page-card__preview-dots';
+        ['#ff6b6b', '#ffd166', '#38d39f'].forEach((color) => {
+          const dot = document.createElement('span');
+          dot.style.background = color;
+          dots.appendChild(dot);
+        });
 
-        const frame = document.createElement('iframe');
-        frame.src = '/site/' + encodeURIComponent(pageName) + '/index.html';
-        frame.title = 'Preview de ' + pageName;
-        frame.loading = 'lazy';
-        frame.setAttribute('referrerpolicy', 'no-referrer');
+        const url = document.createElement('span');
+        url.className = 'page-card__preview-url';
+        url.textContent = '/' + (page.name || 'pagina');
 
-        screen.appendChild(frame);
-        monitor.appendChild(screen);
-        wrapper.appendChild(monitor);
+        chrome.appendChild(dots);
+        chrome.appendChild(url);
+
+        const canvas = document.createElement('div');
+        canvas.className = 'page-card__preview-canvas';
+
+        const kicker = document.createElement('span');
+        kicker.className = 'page-card__preview-kicker';
+        kicker.textContent = 'Prévia leve';
+
+        const headline = document.createElement('strong');
+        headline.className = 'page-card__preview-headline';
+        headline.textContent = page.name || 'Página sem nome';
+
+        const lines = document.createElement('div');
+        lines.className = 'page-card__preview-lines';
+        ['100%', '84%', '62%'].forEach((width) => {
+          const line = document.createElement('span');
+          line.style.width = width;
+          lines.appendChild(line);
+        });
+
+        const cards = document.createElement('div');
+        cards.className = 'page-card__preview-cards';
+        ['Hero', 'Seção', 'CTA'].forEach((label) => {
+          const item = document.createElement('span');
+          item.textContent = label;
+          cards.appendChild(item);
+        });
+
+        canvas.appendChild(kicker);
+        canvas.appendChild(headline);
+        canvas.appendChild(lines);
+        canvas.appendChild(cards);
+
+        const footer = document.createElement('div');
+        footer.className = 'page-card__preview-footer';
+
+        const hint = document.createElement('span');
+        hint.textContent = 'Toque para ampliar';
+
+        const accent = document.createElement('span');
+        accent.className = 'page-card__preview-accent';
+        accent.textContent = 'Preview dinâmico';
+
+        footer.appendChild(hint);
+        footer.appendChild(accent);
+
+        shell.appendChild(chrome);
+        shell.appendChild(canvas);
+        shell.appendChild(footer);
+        wrapper.appendChild(shell);
         return wrapper;
       }
 
@@ -231,7 +314,10 @@
             card.className = 'page-card page-card--page';
             card.style.setProperty('--delay', index + 'ms');
 
-            card.appendChild(buildPreviewFrame(page.name));
+            card.appendChild(createPreviewArt(page));
+
+            const body = document.createElement('div');
+            body.className = 'page-card__body';
 
             const top = document.createElement('div');
             top.className = 'page-card__top';
@@ -251,6 +337,12 @@
             pill.textContent = 'Pronta';
             top.appendChild(content);
             top.appendChild(pill);
+
+            const tags = document.createElement('div');
+            tags.className = 'page-card__tags';
+            tags.appendChild(createTag('Atualizada em', formatDate(page.modified)));
+            tags.appendChild(createTag('Arquivo', page.name || 'Página'));
+            tags.appendChild(createTag('Ação', 'Preview leve'));
 
             const actions = document.createElement('div');
             actions.className = 'page-card__actions';
@@ -285,8 +377,11 @@
             actions.appendChild(previewButton);
             actions.appendChild(deleteButton);
 
-            card.appendChild(top);
-            card.appendChild(actions);
+            body.appendChild(top);
+            body.appendChild(tags);
+            body.appendChild(actions);
+
+            card.appendChild(body);
             fragment.appendChild(card);
           });
 
