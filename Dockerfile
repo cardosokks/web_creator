@@ -3,7 +3,8 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PORT=8000 \
-    DATA_DIR=/data/paginas_geradas
+    DATA_DIR=/data/paginas_geradas \
+    DEFAULT_WEBHOOK_URL=http://seu-webhook:porta/webhook/generate_page
 
 WORKDIR /app
 
