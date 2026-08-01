@@ -40,6 +40,8 @@ Use o `Dockerfile` da raiz do projeto como build.
 
 Se o painel pedir o caminho do volume, use qualquer pasta persistente disponível no host e monte em `/data`. Não use `/data` como caminho de origem do host.
 
+O arquivo [docker-compose.yml](docker-compose.yml) já carrega [ .env.example ](.env.example) com valores padrão. Na prática, isso reduz a configuração manual ao mínimo.
+
 ### Template pronto
 
 Se o painel aceitar Docker Compose, importe o arquivo [docker-compose.yml](docker-compose.yml) e use a variável `DEFAULT_WEBHOOK_URL` no ambiente.
