@@ -1,0 +1,11 @@
+.env
+.env/
+__pycache__
+.pytest_cache
+.git
+.gitignore
+paginas_geradas/
+*.pyc
+*.pyo
+*.pyd
+*.log

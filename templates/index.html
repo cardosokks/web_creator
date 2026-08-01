@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gerador de Páginas — Painel</title>
+    <link href="/static/style.css" rel="stylesheet">
+  </head>
+  <body>
+    <main class="app-shell">
+      <div class="ambient ambient--one"></div>
+      <div class="ambient ambient--two"></div>
+
+      <header class="hero-panel">
+        <div class="hero-panel__copy">
+          <div class="eyebrow">Painel operacional</div>
+          <h1>Gerador de páginas</h1>
+          <p>Crie, acompanhe e organize entregas em uma interface mais sóbria, rápida e preparada para uso em desktop e mobile.</p>
+
+          <div class="hero-stats">
+            <article class="stat-chip">
+              <span class="stat-chip__label">Jobs</span>
+              <strong id="jobsCount">0</strong>
+            </article>
+            <article class="stat-chip">
+              <span class="stat-chip__label">Páginas</span>
+              <strong id="pagesCount">0</strong>
+            </article>
+            <article class="stat-chip stat-chip--accent">
+              <span class="stat-chip__label">Status</span>
+              <strong id="connectionState">Sincronizando</strong>
+            </article>
+          </div>
+        </div>
+
+        <div class="hero-panel__actions">
+          <button id="refreshBtn" class="btn btn-ghost" type="button">Atualizar painel</button>
+          <div class="last-updated" id="lastUpdated">Última atualização: --</div>
+        </div>
+      </header>
+
+      <section class="panel panel--form">
+        <div class="panel-header panel-header--stacked">
+          <div>
+            <h2>Nova geração</h2>
+            <p>Preencha os dados para disparar o webhook de criação.</p>
+          </div>
+          <div class="preview-pill" id="preview">Preview da pasta: -</div>
+        </div>
+
+        <form id="generateForm" class="form-grid">
+          <div class="field field--wide">
+            <label class="form-label" for="url">URL do webhook</label>
+            <input id="url" class="form-control" value="{{ default_webhook_url | e }}" autocomplete="off">
+          </div>
+          <div class="field field--wide">
+            <label class="form-label" for="query">Prompt / query</label>
+            <input id="query" class="form-control" placeholder="Descreva a página que deseja gerar" autocomplete="off">
+          </div>
+          <div class="field">
+            <label class="form-label" for="page_name">Nome da página</label>
+            <input id="page_name" class="form-control" placeholder="Ex.: Landing premium" autocomplete="off">
+          </div>
+          <div class="field">
+            <label class="form-label" for="folder_name">Nome da pasta opcional</label>
+            <input id="folder_name" class="form-control" placeholder="Ex.: projeto_vendas" autocomplete="off">
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Gerar página</button>
+            <span class="form-hint">O nome da pasta segue o nome informado e só recebe sufixo se já existir.</span>
+          </div>
+        </form>
+      </section>
+
+      <section class="section-block">
+        <div class="panel panel--section">
+          <div class="panel-header">
+            <div>
+              <h2>Tarefas em andamento</h2>
+              <p>Monitore o processamento do webhook e os resultados recentes.</p>
+            </div>
+          </div>
+          <div id="jobs" class="card-grid" aria-live="polite"></div>
+        </div>
+
+        <div class="panel panel--section">
+          <div class="panel-header">
+            <div>
+              <h2>Páginas salvas</h2>
+              <p>Acesse rapidamente os arquivos já gerados.</p>
+            </div>
+          </div>
+          <div id="pages" class="card-grid" aria-live="polite"></div>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="pagePreviewDialog" class="preview-dialog">
+      <div class="preview-dialog__header">
+        <div>
+          <div class="preview-dialog__eyebrow">Preview ampliado</div>
+          <h3 id="previewDialogTitle">Página</h3>
+        </div>
+        <button id="closePreviewDialog" class="btn btn-ghost" type="button">Fechar</button>
+      </div>
+      <div class="preview-dialog__monitor">
+        <div class="preview-dialog__screen">
+          <iframe id="previewDialogFrame" title="Preview ampliado" loading="lazy"></iframe>
+        </div>
+      </div>
+    </dialog>
+
+    <script>
+      const previewEl = document.getElementById('preview');
+      const folderInput = document.getElementById('folder_name');
+      const pageInput = document.getElementById('page_name');
+      const jobsCountEl = document.getElementById('jobsCount');
+      const pagesCountEl = document.getElementById('pagesCount');
+      const connectionStateEl = document.getElementById('connectionState');
+      const lastUpdatedEl = document.getElementById('lastUpdated');
+      const previewDialog = document.getElementById('pagePreviewDialog');
+      const previewDialogTitle = document.getElementById('previewDialogTitle');
+      const previewDialogFrame = document.getElementById('previewDialogFrame');
+      const closePreviewDialog = document.getElementById('closePreviewDialog');
+      let currentJobsCount = 0;
+      let currentPagesCount = 0;
+      let lastActiveJobsSignature = '';
+
+      function setEmptyState(container, title, description) {
+        const state = document.createElement('div');
+        state.className = 'empty-state';
+
+        const strong = document.createElement('strong');
+        strong.textContent = title;
+        const paragraph = document.createElement('p');
+        paragraph.textContent = description;
+
+        state.appendChild(strong);
+        state.appendChild(paragraph);
+        container.innerHTML = '';
+        container.appendChild(state);
+      }
+
+      function buildPreviewFrame(pageName) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'page-card__preview';
+
+        wrapper.addEventListener('click', () => openPagePreview(pageName));
+
+        const monitor = document.createElement('div');
+        monitor.className = 'page-card__monitor';
+
+        const screen = document.createElement('div');
+        screen.className = 'page-card__monitor-screen';
+
+        const frame = document.createElement('iframe');
+        frame.src = '/site/' + encodeURIComponent(pageName) + '/index.html';
+        frame.title = 'Preview de ' + pageName;
+        frame.loading = 'lazy';
+        frame.setAttribute('referrerpolicy', 'no-referrer');
+
+        screen.appendChild(frame);
+        monitor.appendChild(screen);
+        wrapper.appendChild(monitor);
+        return wrapper;
+      }
+
+      function openPagePreview(pageName) {
+        previewDialogTitle.textContent = pageName || 'Página';
+        previewDialogFrame.src = '/site/' + encodeURIComponent(pageName) + '/index.html';
+        if (previewDialog.showModal) {
+          previewDialog.showModal();
+        } else {
+          previewDialog.setAttribute('open', '');
+        }
+      }
+
+      function closePagePreview() {
+        previewDialog.close();
+        previewDialogFrame.src = 'about:blank';
+      }
+
+      closePreviewDialog.addEventListener('click', closePagePreview);
+      previewDialog.addEventListener('click', (event) => {
+        if (event.target === previewDialog) {
+          closePagePreview();
+        }
+      });
+
+      function updatePreview() {
+        const folder = folderInput.value.trim();
+        const page = pageInput.value.trim();
+        const base = folder || page || 'projeto';
+        previewEl.textContent = 'Preview da pasta: ' + base;
+      }
+
+      function formatDate(seconds) {
+        if (!seconds) return 'Data indisponível';
+        return new Date(seconds * 1000).toLocaleString('pt-BR', { dateStyle: 'medium', timeStyle: 'short' });
+      }
+
+      function updatePanelMeta({ jobs = currentJobsCount, pages = currentPagesCount, ok = true } = {}) {
+        jobsCountEl.textContent = String(jobs);
+        pagesCountEl.textContent = String(pages);
+        connectionStateEl.textContent = ok ? 'Online' : 'Instável';
+        lastUpdatedEl.textContent = 'Última atualização: ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      }
+
+      folderInput.addEventListener('input', updatePreview);
+      pageInput.addEventListener('input', updatePreview);
+
+      async function loadPages() {
+        try {
+          const res = await fetch('/api/pages');
+          if (!res.ok) throw new Error('Falha ao carregar páginas');
+          const pages = await res.json();
+          const container = document.getElementById('pages');
+          container.innerHTML = '';
+          currentPagesCount = pages.length;
+
+          if (!pages.length) {
+            setEmptyState(container, 'Nenhuma página salva', 'Quando uma geração terminar, o arquivo aparecerá aqui.');
+            updatePanelMeta({ ok: true });
+            return pages;
+          }
+
+          const fragment = document.createDocumentFragment();
+          pages.forEach((page, index) => {
+            const card = document.createElement('article');
+            card.className = 'page-card page-card--page';
+            card.style.setProperty('--delay', index + 'ms');
+
+            card.appendChild(buildPreviewFrame(page.name));
+
+            const top = document.createElement('div');
+            top.className = 'page-card__top';
+
+            const content = document.createElement('div');
+            const title = document.createElement('div');
+            title.className = 'page-card__title';
+            title.textContent = page.name || 'Página sem nome';
+            const meta = document.createElement('div');
+            meta.className = 'page-card__meta';
+            meta.textContent = formatDate(page.modified);
+            content.appendChild(title);
+            content.appendChild(meta);
+
+            const pill = document.createElement('span');
+            pill.className = 'page-card__pill page-card__pill--success';
+            pill.textContent = 'Pronta';
+            top.appendChild(content);
+            top.appendChild(pill);
+
+            const actions = document.createElement('div');
+            actions.className = 'page-card__actions';
+
+            const openLink = document.createElement('a');
+            openLink.className = 'btn btn-secondary';
+            openLink.href = '/site/' + encodeURIComponent(page.name) + '/index.html';
+            openLink.target = '_blank';
+            openLink.rel = 'noopener noreferrer';
+            openLink.textContent = 'Abrir';
+
+            const renameButton = document.createElement('button');
+            renameButton.className = 'btn btn-soft';
+            renameButton.type = 'button';
+            renameButton.textContent = 'Renomear';
+            renameButton.addEventListener('click', () => rename(page.name));
+
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'btn btn-danger';
+            deleteButton.type = 'button';
+            deleteButton.textContent = 'Excluir';
+            deleteButton.addEventListener('click', () => remove(page.name));
+
+            const previewButton = document.createElement('button');
+            previewButton.className = 'btn btn-soft';
+            previewButton.type = 'button';
+            previewButton.textContent = 'Ampliar preview';
+            previewButton.addEventListener('click', () => openPagePreview(page.name));
+
+            actions.appendChild(openLink);
+            actions.appendChild(renameButton);
+            actions.appendChild(previewButton);
+            actions.appendChild(deleteButton);
+
+            card.appendChild(top);
+            card.appendChild(actions);
+            fragment.appendChild(card);
+          });
+
+          container.appendChild(fragment);
+          updatePanelMeta({ ok: true });
+          return pages;
+        } catch (error) {
+          console.error(error);
+          const container = document.getElementById('pages');
+          setEmptyState(container, 'Não foi possível carregar a lista', 'Tente atualizar o painel em instantes.');
+          updatePanelMeta({ ok: false });
+          return [];
+        }
+      }
+
+      async function rename(name) {
+        const newName = prompt('Novo nome da página:', name);
+        if (!newName) return;
+        const res = await fetch('/api/rename', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ current: name, new_name: newName })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          await loadPages();
+        } else {
+          alert(data.error || 'Erro ao renomear');
+        }
+      }
+
+      async function remove(name) {
+        if (!confirm('Excluir ' + name + '?')) return;
+        const res = await fetch('/api/delete', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ name })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          await loadPages();
+        } else {
+          alert(data.error || 'Erro ao excluir');
+        }
+      }
+
+      document.getElementById('generateForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+          url: document.getElementById('url').value.trim(),
+          query: document.getElementById('query').value.trim(),
+          page_name: document.getElementById('page_name').value.trim(),
+          folder_name: document.getElementById('folder_name').value.trim(),
+        };
+        const btn = e.target.querySelector('button[type=submit]');
+        const originalLabel = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Enviando...';
+
+        try {
+          const res = await fetch('/api/jobs', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (data.ok) {
+            await loadJobs();
+            await loadPages();
+            e.target.reset();
+            updatePreview();
+          } else {
+            alert(data.error || 'Erro ao enviar job');
+          }
+        } catch (err) {
+          alert(err);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalLabel;
+        }
+      });
+
+      async function loadJobs() {
+        try {
+          const res = await fetch('/api/jobs');
+          if (!res.ok) throw new Error('Falha ao carregar jobs');
+          const jobs = await res.json();
+          const container = document.getElementById('jobs');
+          container.innerHTML = '';
+          currentJobsCount = jobs.length;
+          container.dataset.activeSignature = jobs.map((job) => job.id).sort().join('|');
+
+          if (!jobs.length) {
+            setEmptyState(container, 'Nenhuma tarefa em andamento', 'As novas gerações aparecem aqui assim que forem enviadas.');
+            updatePanelMeta({ ok: true });
+            return jobs;
+          }
+
+          const fragment = document.createDocumentFragment();
+          jobs.forEach((job, index) => {
+            const card = document.createElement('article');
+            card.className = 'page-card page-card--job';
+            card.style.setProperty('--delay', index + 'ms');
+
+            const status = job.status || 'queued';
+            let badgeClass = 'page-card__pill page-card__pill--queued';
+            let extra = 'Fila';
+            if (status === 'running') {
+              badgeClass = 'page-card__pill page-card__pill--running';
+              extra = 'Executando';
+            } else if (status === 'success') {
+              badgeClass = 'page-card__pill page-card__pill--success';
+              extra = 'Concluído';
+            } else if (status === 'failed') {
+              badgeClass = 'page-card__pill page-card__pill--failed';
+              extra = 'Falhou';
+            }
+
+            const top = document.createElement('div');
+            top.className = 'page-card__top';
+
+            const content = document.createElement('div');
+            const title = document.createElement('div');
+            title.className = 'page-card__title';
+            title.textContent = job.page_name || job.folder_name || 'Job sem nome';
+            const meta = document.createElement('div');
+            meta.className = 'page-card__meta';
+            meta.textContent = formatDate(job.created_at);
+            content.appendChild(title);
+            content.appendChild(meta);
+
+            const badge = document.createElement('span');
+            badge.className = badgeClass;
+            badge.textContent = extra;
+            top.appendChild(content);
+            top.appendChild(badge);
+
+            const actions = document.createElement('div');
+            actions.className = 'page-card__actions';
+
+            if (job.folder) {
+              const openLink = document.createElement('a');
+              openLink.className = 'btn btn-secondary';
+              openLink.href = '/site/' + encodeURIComponent(job.folder) + '/index.html';
+              openLink.target = '_blank';
+              openLink.rel = 'noopener noreferrer';
+              openLink.textContent = 'Abrir';
+              actions.appendChild(openLink);
+            }
+
+            const detailsButton = document.createElement('button');
+            detailsButton.className = 'btn btn-soft';
+            detailsButton.type = 'button';
+            detailsButton.textContent = 'Detalhes';
+            detailsButton.addEventListener('click', () => showJobDetails(job.id));
+            actions.appendChild(detailsButton);
+
+            card.appendChild(top);
+            card.appendChild(actions);
+            fragment.appendChild(card);
+          });
+
+          container.appendChild(fragment);
+          updatePanelMeta({ ok: true });
+          return jobs;
+        } catch (error) {
+          console.error(error);
+          const container = document.getElementById('jobs');
+          setEmptyState(container, 'Não foi possível carregar os jobs', 'Tente atualizar o painel em instantes.');
+          updatePanelMeta({ ok: false });
+          return [];
+        }
+      }
+
+      async function showJobDetails(jobId) {
+        const res = await fetch('/api/job/' + jobId);
+        const details = await res.json();
+        alert(JSON.stringify(details, null, 2));
+      }
+
+      async function refreshJobsOnly() {
+        connectionStateEl.textContent = 'Sincronizando';
+        const jobs = await loadJobs();
+        const activeSignature = jobs.map((job) => job.id).sort().join('|');
+        if (activeSignature !== lastActiveJobsSignature) {
+          lastActiveJobsSignature = activeSignature;
+          await loadPages();
+        }
+        updatePanelMeta({ ok: true });
+      }
+
+      setInterval(refreshJobsOnly, 6000);
+      document.getElementById('refreshBtn').addEventListener('click', async () => {
+        await loadJobs();
+        await loadPages();
+        lastActiveJobsSignature = document.getElementById('jobs').dataset.activeSignature || '';
+        updatePanelMeta({ ok: true });
+      });
+
+      updatePreview();
+      loadPages();
+      refreshJobsOnly();
+    </script>
+  </body>
+</html>
