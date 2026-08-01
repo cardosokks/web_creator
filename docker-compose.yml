@@ -11,5 +11,8 @@ services:
       DATA_DIR: /data/paginas_geradas
       DEFAULT_WEBHOOK_URL: ${DEFAULT_WEBHOOK_URL:-http://seu-webhook:porta/webhook/generate_page}
     volumes:
-      - ./data:/data
+      - web_creator_data:/data
     restart: unless-stopped
+
+volumes:
+  web_creator_data:

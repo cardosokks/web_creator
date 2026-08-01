@@ -23,7 +23,7 @@ DATA_DIR=/data/paginas_geradas
 DEFAULT_WEBHOOK_URL=http://seu-webhook:porta/webhook/generate_page
 ```
 
-No EasyPanel, aponte um volume persistente para `/data` para não perder as páginas geradas ao recriar o container.
+No EasyPanel, use um volume persistente do próprio painel montado em `/data` para não perder as páginas geradas ao recriar o container.
 
 Use o `Dockerfile` da raiz do projeto como build.
 
@@ -32,13 +32,13 @@ Use o `Dockerfile` da raiz do projeto como build.
 - Build context: raiz do repositório
 - Dockerfile: `Dockerfile`
 - Porta pública/container: `8000`
-- Volume persistente: montar `./data` no host em `/data` no container
+- Volume persistente: volume gerenciado pelo painel montado em `/data` no container
 - Variáveis de ambiente:
 	- `PORT=8000`
 	- `DATA_DIR=/data/paginas_geradas`
 	- `DEFAULT_WEBHOOK_URL=http://seu-webhook:porta/webhook/generate_page`
 
-Se quiser que a pasta gerada fique no volume persistente por fora também, use o mesmo caminho no host e dentro do container para simplificar backup.
+Se o painel pedir o caminho do volume, use qualquer pasta persistente disponível no host e monte em `/data`. Não use `/data` como caminho de origem do host.
 
 ### Template pronto
 
