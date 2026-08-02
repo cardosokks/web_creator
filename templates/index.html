@@ -14,7 +14,7 @@
             <h1>Gerador</h1>
           </div>
 
-          <div class="sidebar__section">
+          <div class="sidebar__section" id="desktopGenerateFormContainer">
             <h2 class="sidebar__title">Nova Geração</h2>
             <form id="generateForm" class="sidebar__form">
               <div class="field">
@@ -68,26 +68,28 @@
           </header>
 
           <div class="content-wrapper">
-            <div class="view active" id="mobileGenerateFormContainer">
-              <!-- Mobile-only form will be injected here by JS -->
-            </div>
-            <div class="view" id="view-jobs">
-              <section class="panel">
-                <div class="panel__header">
-                  <h2>Tarefas em Andamento</h2>
-                  <p>Gerações sendo processadas pelo webhook.</p>
-                </div>
-                <div id="jobs" class="item-list" aria-live="polite"></div>
-              </section>
-            </div>
-            <div class="view" id="view-pages">
-              <section class="panel">
-                <div class="panel__header">
-                  <h2>Páginas Salvas</h2>
-                  <p>Projetos finalizados e prontos para uso.</p>
-                </div>
-                <div id="pages" class="item-list" aria-live="polite"></div>
-              </section>
+            <div class="content-grid">
+              <div class="view active" id="mobileGenerateFormContainer">
+                <!-- Mobile-only form will be injected here by JS -->
+              </div>
+              <div class="view" id="view-jobs">
+                <section class="panel">
+                  <div class="panel__header">
+                    <h2>Tarefas em Andamento</h2>
+                    <p>Gerações sendo processadas pelo webhook.</p>
+                  </div>
+                  <div id="jobs" class="item-list" aria-live="polite"></div>
+                </section>
+              </div>
+              <div class="view" id="view-pages">
+                <section class="panel">
+                  <div class="panel__header">
+                    <h2>Páginas Salvas</h2>
+                    <p>Projetos finalizados e prontos para uso.</p>
+                  </div>
+                  <div id="pages" class="item-list" aria-live="polite"></div>
+                </section>
+              </div>
             </div>
           </div>
         </main>
@@ -631,6 +633,7 @@
         loadPages();
         refreshJobsOnly();
         setInterval(refreshJobsOnly, 6000);
+        setupMobileNav();
       });
 
       // --- Mobile Navigation & Form Management ---
@@ -645,7 +648,6 @@
           // Mobile view: move form section to mobile container
           if (generateFormSection && mobileGenerateFormParent) {
             mobileGenerateFormParent.appendChild(generateFormSection);
-            generateFormSection.classList.add('panel'); // Add panel styling for mobile view
           }
         } else {
           // Desktop view: move form section back to sidebar
@@ -658,7 +660,6 @@
             } else {
               sidebarAside.appendChild(generateFormSection);
             }
-            generateFormSection.classList.remove('panel'); // Remove panel styling for desktop sidebar
           }
         }
       }
@@ -680,6 +681,7 @@
         // Initial call to set form position
         handleMediaQueryChange(mediaQuery);
         // Listen for changes
+        // Note: 'change' event is now preferred over addListener/removeListener
         mediaQuery.addEventListener('change', handleMediaQueryChange);
       }
 

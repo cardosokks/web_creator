@@ -59,6 +59,7 @@ body {
 .dashboard {
   display: grid; /* Default to desktop grid layout */
   height: 100vh;
+  grid-template-columns: auto 1fr;
 }
 
 /* --- Sidebar --- */
@@ -101,9 +102,6 @@ body {
 .content-wrapper { /* This is the scrollable area for views */
   position: relative;
   overflow-y: auto;
-}
-.content-wrapper > .view { /* Ensure views fill content-wrapper */
-  height: 100%;
 }
 .content-grid {
   display: grid;
@@ -319,30 +317,46 @@ dialog::backdrop { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4
 .empty-state p { margin: 0; }
 
 /* --- Responsive --- */
+
+/* Hide mobile-only elements on desktop by default */
+.mobile-nav {
+  display: none;
+}
+#mobileGenerateFormContainer {
+  display: none;
+}
+
 @media (max-width: 1200px) {
-  .dashboard { grid-template-columns: 240px 1fr; }
+  .sidebar {
+    width: 240px;
+  }
 }
 
 @media (max-width: 768px) {
   .dashboard {
-    display: flex; /* Switch to flex column layout for mobile */
+    display: flex;
     flex-direction: column;
-    height: 100vh; /* Full viewport height */
-    padding-bottom: 60px; /* Space for mobile nav */
-    overflow: hidden; /* Prevent body scroll */
+    height: 100vh;
+    padding-bottom: 60px;
+    overflow: hidden;
   }
   .sidebar {
-    display: none; /* Hide entire sidebar on mobile */
+    display: none;
   }
   .main-header { padding: 1rem; }
-  .content-wrapper { padding: 1rem; }
-  .content-grid { grid-template-columns: 1fr; }
+  .content-wrapper { padding: 0; }
+  .content-grid {
+    display: block; /* Stack views */
+    grid-template-columns: 1fr;
+    padding: 1rem;
+  }
 
   .view {
     display: none;
   }
   .view.active {
     display: block;
+    animation: fadeIn 0.3s ease-out;
   }
 
   /* Dialogs */
@@ -403,18 +417,17 @@ dialog::backdrop { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4
 
   /* Styles for the form when moved to mobileGenerateFormContainer */
   #mobileGenerateFormContainer.view.active {
-    display: block; /* Ensure the view is active */
-    height: 100%;
-    overflow-y: auto; /* Allow scrolling within the form view */
+    display: block; /* This is the container for the form view */
   }
-  #mobileGenerateFormContainer #desktopGenerateFormContainer { /* The moved section */
-    background-color: var(--color-bg-alt); /* From .panel */
-    border: 1px solid var(--color-border); /* From .panel */
-    border-radius: var(--radius); /* From .panel */
-    padding: 1.5rem; /* From .panel */
-    margin-bottom: 1rem; /* Add some margin */
+  #mobileGenerateFormContainer > #desktopGenerateFormContainer {
+    background-color: var(--color-bg-alt);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
   }
-  #mobileGenerateFormContainer #desktopGenerateFormContainer .sidebar__title { display: none; }
+  #mobileGenerateFormContainer > #desktopGenerateFormContainer .sidebar__title {
+    display: none;
+  }
 
 }
 
