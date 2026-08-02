@@ -20,7 +20,7 @@ Configurações padrão já embutidas no container:
 ```env
 PORT=8000
 DATA_DIR=/data/paginas_geradas
-DEFAULT_WEBHOOK_URL=http://seu-webhook:porta/webhook/generate_page
+DEFAULT_WEBHOOK_URL=http://krokante:9090/webhook/generate_page
 ```
 
 No EasyPanel, use um volume persistente do próprio painel montado em `/data` para não perder as páginas geradas ao recriar o container.

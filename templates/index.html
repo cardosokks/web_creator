@@ -4,125 +4,136 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Gerador de Páginas — Painel</title>
-    <link href="/static/style.css" rel="stylesheet">
-    <link href="/static/modifications.css" rel="stylesheet">
+    <link href="/static/dashboard.css" rel="stylesheet">
   </head>
   <body>
-    <main class="app-shell">
-      <div class="ambient ambient--one"></div>
-      <div class="ambient ambient--two"></div>
-
-      <header class="hero-panel">
-        <div class="hero-panel__copy">
-          <div class="eyebrow">Painel operacional</div>
-          <h1>Gerador de páginas</h1>
-          <p>Crie, acompanhe e organize entregas em uma interface mais sóbria, rápida e preparada para uso em desktop e mobile.</p>
-
-          <div class="hero-stats">
-            <article class="stat-chip">
-              <span class="stat-chip__label">Jobs</span>
-              <strong id="jobsCount">0</strong>
-            </article>
-            <article class="stat-chip">
-              <span class="stat-chip__label">Páginas</span>
-              <strong id="pagesCount">0</strong>
-            </article>
-            <article class="stat-chip stat-chip--accent">
-              <span class="stat-chip__label">Status</span>
-              <strong id="connectionState">Sincronizando</strong>
-            </article>
+    <div class="dashboard">
+        <aside class="sidebar">
+          <div class="sidebar__header">
+            <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M2.25 21h19.5m-18-18h18m-1.5 18V3m-15 18V3m6 16.5v-15m6 15V4.5"></path></svg>
+            <h1>Gerador</h1>
           </div>
-        </div>
 
-        <div class="hero-panel__actions">
-          <button id="refreshBtn" class="btn btn-ghost" type="button">Atualizar painel</button>
-          <div class="last-updated" id="lastUpdated">Última atualização: --</div>
-        </div>
-      </header>
+          <div class="sidebar__section">
+            <h2 class="sidebar__title">Nova Geração</h2>
+            <form id="generateForm" class="sidebar__form">
+              <div class="field">
+                <label class="form-label" for="url">URL do webhook</label>
+                <select id="url" class="form-control"></select>
+              </div>
+              <div class="field">
+                <label class="form-label" for="query">Prompt / query</label>
+                <input id="query" class="form-control" placeholder="Descreva a página..." autocomplete="off">
+              </div>
+              <div class="field">
+                <label class="form-label" for="page_name">Nome da página</label>
+                <input id="page_name" class="form-control" placeholder="Ex.: Landing premium" autocomplete="off">
+              </div>
+              <div class="field">
+                <label class="form-label" for="folder_name">Nome da pasta (opcional)</label>
+                <input id="folder_name" class="form-control" placeholder="Ex.: projeto_vendas" autocomplete="off">
+                <div class="form-hint" id="preview">Preview: <span>-</span></div>
+              </div>
+              <button type="submit" class="btn btn-primary" id="generateBtn">
+                <svg class="icon-add" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z" clip-rule="evenodd"></path></svg>
+                <span>Gerar página</span>
+              </button>
+            </form>
+          </div>
 
-      <section class="panel panel--form">
-        <div class="panel-header">
-          <div>
-            <h2>Webhooks Salvos</h2>
-            <p>Adicione, remova e selecione webhooks para usar na geração.</p>
+          <div class="sidebar__footer">
+            <button id="manageWebhooksBtn" class="btn btn-secondary">Gerenciar Webhooks</button>
+            <div class="connection-status">
+              <span id="connectionState" class="dot"></span>
+              <span id="lastUpdated"></span>
+            </div>
           </div>
-        </div>
-        <form id="addWebhookForm" class="form-grid">
-          <div class="field field--wide">
-            <label class="form-label" for="newWebhookUrl">Nova URL de Webhook</label>
-            <input id="newWebhookUrl" class="form-control" placeholder="https://seu-webhook.com/api/generate" autocomplete="off">
+        </aside>
+
+        <main class="main-content">
+          <header class="main-header">
+            <div class="stats">
+              <div class="stat">
+                <div class="stat__label">Tarefas Ativas</div>
+                <div id="jobsCount" class="stat__value">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Páginas Geradas</div>
+                <div id="pagesCount" class="stat__value">0</div>
+              </div>
+            </div>
+            <button id="refreshBtn" class="btn btn-icon" type="button" aria-label="Atualizar painel">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M15.312 11.424a5.5 5.5 0 0 1-9.201-4.456 5.5 5.5 0 0 1 1.043-9.452 5.5 5.5 0 0 1 10.234 3.452 5.5 5.5 0 0 1-2.076 10.456l-2.362 2.362a.75.75 0 0 1-1.06-1.06l2.362-2.362a4 4 0 0 0-4.18-6.012 4 4 0 0 0-3.434 7.012 4 4 0 0 0 6.364 1.51 4 4 0 0 0 .527-6.743.75.75 0 0 1 1.21 0.882A5.5 5.5 0 0 1 15.312 11.424Z" clip-rule="evenodd" /></svg>
+            </button>
+          </header>
+
+          <div class="content-wrapper">
+            <div class="view active" id="mobileGenerateFormContainer">
+              <!-- Mobile-only form will be injected here by JS -->
+            </div>
+            <div class="view" id="view-jobs">
+              <section class="panel">
+                <div class="panel__header">
+                  <h2>Tarefas em Andamento</h2>
+                  <p>Gerações sendo processadas pelo webhook.</p>
+                </div>
+                <div id="jobs" class="item-list" aria-live="polite"></div>
+              </section>
+            </div>
+            <div class="view" id="view-pages">
+              <section class="panel">
+                <div class="panel__header">
+                  <h2>Páginas Salvas</h2>
+                  <p>Projetos finalizados e prontos para uso.</p>
+                </div>
+                <div id="pages" class="item-list" aria-live="polite"></div>
+              </section>
+            </div>
           </div>
-          <div class="form-actions">
-            <button type="submit" class="btn btn-secondary">Adicionar Webhook</button>
-          </div>
+        </main>
+
+      <nav class="mobile-nav">
+        <button class="mobile-nav__btn active" data-view="generate">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5V-2.5Z" clip-rule="evenodd" /></svg>
+          <span>Gerar</span>
+        </button>
+        <button class="mobile-nav__btn" data-view="jobs">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2 3.5A1.5 1.5 0 0 1 3.5 2h1.148a1.5 1.5 0 0 1 1.465 1.175l.716 3.223a1.5 1.5 0 0 1-1.052 1.767l-.933.267c-.41.117-.643.555-.48.95a11.542 11.542 0 0 0 6.254 6.254c.395.163.833-.07.95-.48l.267-.933a1.5 1.5 0 0 1 1.767-1.052l3.223.716A1.5 1.5 0 0 1 18 15.352V16.5a1.5 1.5 0 0 1-1.5 1.5H15a3 3 0 0 1-3-3H9.5a3 3 0 0 1-3-3V5a3 3 0 0 1-3-3V3.5Z" clip-rule="evenodd" /></svg>
+          <span>Tarefas</span>
+        </button>
+        <button class="mobile-nav__btn" data-view="pages">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M5.433 13.917l1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" /><path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" /></svg>
+          <span>Páginas</span>
+        </button>
+      </nav>
+    </div>
+
+    <dialog id="webhooksDialog">
+      <div class="dialog-header">
+        <h2>Gerenciar Webhooks</h2>
+        <button id="closeWebhooksDialog" class="btn btn-icon" type="button" aria-label="Fechar">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"></path></svg>
+        </button>
+      </div>
+      <div class="dialog-content">
+        <p>Adicione, remova e selecione webhooks para usar na geração.</p>
+        <form id="addWebhookForm" class="dialog-form">
+          <input id="newWebhookUrl" class="form-control" placeholder="https://seu-webhook.com/api/generate" autocomplete="off">
+          <button type="submit" class="btn btn-secondary">Adicionar</button>
         </form>
         <div id="webhookList" class="webhook-list"></div>
-      </section>
-
-      <section class="panel panel--form">
-        <div class="panel-header panel-header--stacked">
-          <div>
-            <h2>Nova geração</h2>
-            <p>Preencha os dados para disparar o webhook de criação.</p>
-          </div>
-          <div class="preview-pill" id="preview">Preview da pasta: -</div>
-        </div>
-
-        <form id="generateForm" class="form-grid">
-          <div class="field field--wide">
-            <label class="form-label" for="url">URL do webhook</label>
-            <select id="url" class="form-control"></select>
-          </div>
-          <div class="field field--wide">
-            <label class="form-label" for="query">Prompt / query</label>
-            <input id="query" class="form-control" placeholder="Descreva a página que deseja gerar" autocomplete="off">
-          </div>
-          <div class="field">
-            <label class="form-label" for="page_name">Nome da página</label>
-            <input id="page_name" class="form-control" placeholder="Ex.: Landing premium" autocomplete="off">
-          </div>
-          <div class="field">
-            <label class="form-label" for="folder_name">Nome da pasta opcional</label>
-            <input id="folder_name" class="form-control" placeholder="Ex.: projeto_vendas" autocomplete="off">
-          </div>
-
-          <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Gerar página</button>
-            <span class="form-hint">O nome da pasta segue o nome informado e só recebe sufixo se já existir.</span>
-          </div>
-        </form>
-      </section>
-
-      <section class="section-block">
-        <div class="panel panel--section">
-          <div class="panel-header">
-            <div>
-              <h2>Tarefas em andamento</h2>
-              <p>Monitore o processamento do webhook e os resultados recentes.</p>
-            </div>
-          </div>
-          <div id="jobs" class="card-grid" aria-live="polite"></div>
-        </div>
-
-        <div class="panel panel--section">
-          <div class="panel-header">
-            <div>
-              <h2>Páginas salvas</h2>
-              <p>Acesse rapidamente os arquivos já gerados.</p>
-            </div>
-          </div>
-          <div id="pages" class="card-grid" aria-live="polite"></div>
-        </div>
-      </section>
-    </main>
+      </div>
+    </dialog>
 
     <dialog id="pagePreviewDialog" class="preview-dialog">
       <div class="preview-dialog__header">
         <div>
-          <div class="preview-dialog__eyebrow">Preview ampliado</div>
+          <div class="preview-dialog__eyebrow">Preview da Página</div>
           <h3 id="previewDialogTitle">Página</h3>
         </div>
-        <button id="closePreviewDialog" class="btn btn-ghost" type="button">Fechar</button>
+        <button id="closePreviewDialog" class="btn btn-icon" type="button" aria-label="Fechar">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"></path></svg>
+        </button>
       </div>
       <div class="preview-dialog__monitor">
         <div class="preview-dialog__screen">
@@ -132,17 +143,38 @@
     </dialog>
 
     <script>
-      const previewEl = document.getElementById('preview');
+      // --- Icon definitions for JS ---
+      const ICONS = {
+        rename: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.213.213-.46.394-.724.534l-3.091 1.546a.75.75 0 0 1-.925-.925l1.546-3.09a4.023 4.023 0 0 1 .534-.724l8.61-8.61Zm.176 2.294-6.62 6.62a2.515 2.515 0 0 0-.33.46l-1.03 2.06 2.06-1.03a2.515 2.515 0 0 0 .46-.33l6.62-6.62-1.14-1.14Z"></path></svg>`,
+        delete: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3V3.25a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clip-rule="evenodd"></path></svg>`,
+        open: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M6.22 8.72a.75.75 0 0 0 1.06 1.06l5.22-5.22v1.69a.75.75 0 0 0 1.5 0v-3.5a.75.75 0 0 0-.75-.75h-3.5a.75.75 0 0 0 0 1.5h1.69L6.22 8.72Z"></path><path d="M3.5 2A1.5 1.5 0 0 0 2 3.5v9A1.5 1.5 0 0 0 3.5 14h9a1.5 1.5 0 0 0 1.5-1.5v-5a.75.75 0 0 0-1.5 0v5a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h5a.75.75 0 0 0 0-1.5h-5Z"></path></svg>`,
+        loading: `<svg class="spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`,
+        preview: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path d="M10.5 5h-5a.5.5 0 0 0-.5.5v5a.5.5 0 0 0 .5.5h5a.5.5 0 0 0 .5-.5v-5a.5.5 0 0 0-.5-.5ZM5.25 5.5A.25.25 0 0 1 5.5 5.25h5a.25.25 0 0 1 .25.25v5a.25.25 0 0 1-.25.25h-5A.25.25 0 0 1 5.25 10.5v-5Z"></path><path d="M8 6.5a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2a.5.5 0 0 1 .5-.5Z"></path><path d="M2 2.5A1.5 1.5 0 0 1 3.5 1h9A1.5 1.5 0 0 1 14 2.5v9a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5v-9ZM3.5 2a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5h-9Z"></path></svg>`,
+        details: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M15 8A7 7 0 1 1 1 8a7 7 0 0 1 14 0Zm-6.25.75a.75.75 0 0 0 0-1.5h-2.5a.75.75 0 0 0 0 1.5h2.5ZM8 6a.75.75 0 0 1 .75-.75h.008a.75.75 0 0 1 .75.75v.008a.75.75 0 0 1-.75.75H8.75A.75.75 0 0 1 8 6ZM7.25 11a.75.75 0 0 0 0-1.5h-2.5a.75.75 0 0 0 0 1.5h2.5Z" clip-rule="evenodd"></path></svg>`,
+      };
+
+      // --- Element Selectors ---
+      const previewEl = document.getElementById('preview').querySelector('span');
       const folderInput = document.getElementById('folder_name');
       const pageInput = document.getElementById('page_name');
       const jobsCountEl = document.getElementById('jobsCount');
       const pagesCountEl = document.getElementById('pagesCount');
-      const connectionStateEl = document.getElementById('connectionState');
+      const connectionStateEl = document.querySelector('.connection-status');
       const lastUpdatedEl = document.getElementById('lastUpdated');
+      const refreshBtn = document.getElementById('refreshBtn');
+
+      // Page Preview Dialog
       const previewDialog = document.getElementById('pagePreviewDialog');
       const previewDialogTitle = document.getElementById('previewDialogTitle');
       const previewDialogFrame = document.getElementById('previewDialogFrame');
       const closePreviewDialog = document.getElementById('closePreviewDialog');
+
+      // Webhooks Dialog
+      const webhooksDialog = document.getElementById('webhooksDialog');
+      const manageWebhooksBtn = document.getElementById('manageWebhooksBtn');
+      const closeWebhooksDialog = document.getElementById('closeWebhooksDialog');
+
+      // State
       let currentJobsCount = 0;
       let currentPagesCount = 0;
       let lastActiveJobsSignature = '';
@@ -173,20 +205,21 @@
         // Render the list for management
         webhookListContainer.innerHTML = '';
         if (urls.length === 0) {
-          webhookListContainer.innerHTML = '<p class="webhook-list-empty">Nenhuma URL de webhook salva.</p>';
+          webhookListContainer.innerHTML = '<div class="empty-state">Nenhuma URL salva.</div>';
         } else {
           urls.forEach(url => {
             const item = document.createElement('div');
             item.className = 'webhook-list-item';
-            
+
             const urlSpan = document.createElement('span');
             urlSpan.textContent = url;
             item.appendChild(urlSpan);
 
             const deleteBtn = document.createElement('button');
-            deleteBtn.textContent = 'Excluir';
-            deleteBtn.className = 'btn btn-danger btn-sm';
+            deleteBtn.innerHTML = ICONS.delete;
+            deleteBtn.className = 'btn btn-icon btn-danger';
             deleteBtn.type = 'button';
+            deleteBtn.setAttribute('aria-label', 'Excluir webhook');
             deleteBtn.addEventListener('click', () => {
               if (confirm('Tem certeza que deseja excluir esta URL de webhook?')) {
                 deleteWebhookUrl(url);
@@ -241,126 +274,19 @@
       });
       // --- End Webhook Management ---
 
+      // --- Dialog Management ---
+      manageWebhooksBtn.addEventListener('click', () => webhooksDialog.showModal());
+      closeWebhooksDialog.addEventListener('click', () => webhooksDialog.close());
+      webhooksDialog.addEventListener('click', (e) => {
+        if (e.target === webhooksDialog) webhooksDialog.close();
+      });
+
       function setEmptyState(container, title, description) {
         const state = document.createElement('div');
         state.className = 'empty-state';
-
-        const strong = document.createElement('strong');
-        strong.textContent = title;
-        const paragraph = document.createElement('p');
-        paragraph.textContent = description;
-
-        state.appendChild(strong);
-        state.appendChild(paragraph);
+        state.innerHTML = `<strong>${title}</strong><p>${description}</p>`;
         container.innerHTML = '';
         container.appendChild(state);
-      }
-
-      function hashToHue(value) {
-        let hash = 0;
-        const source = value || 'pagina';
-        for (let index = 0; index < source.length; index += 1) {
-          hash = (hash * 31 + source.charCodeAt(index)) >>> 0;
-        }
-        return hash % 360;
-      }
-
-      function createTag(label, value) {
-        const tag = document.createElement('div');
-        tag.className = 'page-card__tag';
-
-        const tagLabel = document.createElement('span');
-        tagLabel.className = 'page-card__tag-label';
-        tagLabel.textContent = label;
-
-        const tagValue = document.createElement('strong');
-        tagValue.className = 'page-card__tag-value';
-        tagValue.textContent = value;
-
-        tag.appendChild(tagLabel);
-        tag.appendChild(tagValue);
-        return tag;
-      }
-
-      function createPreviewArt(page) {
-        const wrapper = document.createElement('button');
-        wrapper.className = 'page-card__preview';
-        wrapper.type = 'button';
-        wrapper.style.setProperty('--accent-hue', String(hashToHue(page.name)));
-        wrapper.setAttribute('aria-label', 'Abrir preview de ' + (page.name || 'Página'));
-        wrapper.addEventListener('click', () => openPagePreview(page.name));
-
-        const shell = document.createElement('div');
-        shell.className = 'page-card__preview-shell';
-
-        const chrome = document.createElement('div');
-        chrome.className = 'page-card__preview-chrome';
-
-        const dots = document.createElement('div');
-        dots.className = 'page-card__preview-dots';
-        ['#ff6b6b', '#ffd166', '#38d39f'].forEach((color) => {
-          const dot = document.createElement('span');
-          dot.style.background = color;
-          dots.appendChild(dot);
-        });
-
-        const url = document.createElement('span');
-        url.className = 'page-card__preview-url';
-        url.textContent = '/' + (page.name || 'pagina');
-
-        chrome.appendChild(dots);
-        chrome.appendChild(url);
-
-        const canvas = document.createElement('div');
-        canvas.className = 'page-card__preview-canvas';
-
-        const kicker = document.createElement('span');
-        kicker.className = 'page-card__preview-kicker';
-        kicker.textContent = 'Prévia leve';
-
-        const headline = document.createElement('strong');
-        headline.className = 'page-card__preview-headline';
-        headline.textContent = page.name || 'Página sem nome';
-
-        const lines = document.createElement('div');
-        lines.className = 'page-card__preview-lines';
-        ['100%', '84%', '62%'].forEach((width) => {
-          const line = document.createElement('span');
-          line.style.width = width;
-          lines.appendChild(line);
-        });
-
-        const cards = document.createElement('div');
-        cards.className = 'page-card__preview-cards';
-        ['Hero', 'Seção', 'CTA'].forEach((label) => {
-          const item = document.createElement('span');
-          item.textContent = label;
-          cards.appendChild(item);
-        });
-
-        canvas.appendChild(kicker);
-        canvas.appendChild(headline);
-        canvas.appendChild(lines);
-        canvas.appendChild(cards);
-
-        const footer = document.createElement('div');
-        footer.className = 'page-card__preview-footer';
-
-        const hint = document.createElement('span');
-        hint.textContent = 'Toque para ampliar';
-
-        const accent = document.createElement('span');
-        accent.className = 'page-card__preview-accent';
-        accent.textContent = 'Preview dinâmico';
-
-        footer.appendChild(hint);
-        footer.appendChild(accent);
-
-        shell.appendChild(chrome);
-        shell.appendChild(canvas);
-        shell.appendChild(footer);
-        wrapper.appendChild(shell);
-        return wrapper;
       }
 
       function openPagePreview(pageName) {
@@ -389,19 +315,20 @@
         const folder = folderInput.value.trim();
         const page = pageInput.value.trim();
         const base = folder || page || 'projeto';
-        previewEl.textContent = 'Preview da pasta: ' + base;
+        previewEl.textContent = base;
       }
 
       function formatDate(seconds) {
         if (!seconds) return 'Data indisponível';
-        return new Date(seconds * 1000).toLocaleString('pt-BR', { dateStyle: 'medium', timeStyle: 'short' });
+        return new Date(seconds * 1000).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
       }
 
       function updatePanelMeta({ jobs = currentJobsCount, pages = currentPagesCount, ok = true } = {}) {
         jobsCountEl.textContent = String(jobs);
         pagesCountEl.textContent = String(pages);
-        connectionStateEl.textContent = ok ? 'Online' : 'Instável';
-        lastUpdatedEl.textContent = 'Última atualização: ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        connectionStateEl.classList.toggle('ok', ok);
+        connectionStateEl.title = ok ? 'Conectado' : 'Erro de conexão';
+        lastUpdatedEl.textContent = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       }
 
       folderInput.addEventListener('input', updatePreview);
@@ -424,66 +351,54 @@
 
           const fragment = document.createDocumentFragment();
           pages.forEach((page, index) => {
-            const card = document.createElement('article');
-            card.className = 'page-card page-card--page';
-            card.style.setProperty('--delay', index + 'ms');
+            const item = document.createElement('div');
+            item.className = 'item-list__item';
+            item.style.setProperty('--delay', index * 50 + 'ms');
 
-            card.appendChild(createPreviewArt(page));
+            const main = document.createElement('div');
+            main.className = 'item-list__main';
 
-            const body = document.createElement('div');
-            body.className = 'page-card__body';
-
-            const top = document.createElement('div');
-            top.className = 'page-card__top';
-
-            const content = document.createElement('div');
-            const title = document.createElement('div');
-            title.className = 'page-card__title';
+            const title = document.createElement('strong');
+            title.className = 'item-list__title';
             title.textContent = page.name || 'Página sem nome';
-            const meta = document.createElement('div');
-            meta.className = 'page-card__meta';
-            meta.textContent = formatDate(page.modified);
-            content.appendChild(title);
-            content.appendChild(meta);
 
-            const pill = document.createElement('span');
-            pill.className = 'page-card__pill page-card__pill--success';
-            pill.textContent = 'Pronta';
-            top.appendChild(content);
-            top.appendChild(pill);
+            const meta = document.createElement('span');
+            meta.className = 'item-list__meta';
+            meta.textContent = `Atualizada em ${formatDate(page.modified)}`;
 
-            const tags = document.createElement('div');
-            tags.className = 'page-card__tags';
-            tags.appendChild(createTag('Atualizada em', formatDate(page.modified)));
-            tags.appendChild(createTag('Arquivo', page.name || 'Página'));
-            tags.appendChild(createTag('Ação', 'Preview leve'));
+            main.appendChild(title);
+            main.appendChild(meta);
 
             const actions = document.createElement('div');
-            actions.className = 'page-card__actions';
+            actions.className = 'item-list__actions';
 
             const openLink = document.createElement('a');
-            openLink.className = 'btn btn-secondary';
+            openLink.className = 'btn btn-icon';
+            openLink.innerHTML = ICONS.open;
             openLink.href = '/site/' + encodeURIComponent(page.name) + '/index.html';
             openLink.target = '_blank';
             openLink.rel = 'noopener noreferrer';
-            openLink.textContent = 'Abrir';
+            openLink.title = 'Abrir página';
 
             const renameButton = document.createElement('button');
-            renameButton.className = 'btn btn-soft';
+            renameButton.className = 'btn btn-icon';
+            renameButton.innerHTML = ICONS.rename;
             renameButton.type = 'button';
-            renameButton.textContent = 'Renomear';
+            renameButton.title = 'Renomear';
             renameButton.addEventListener('click', () => rename(page.name));
 
             const deleteButton = document.createElement('button');
-            deleteButton.className = 'btn btn-danger';
+            deleteButton.className = 'btn btn-icon btn-danger';
+            deleteButton.innerHTML = ICONS.delete;
             deleteButton.type = 'button';
-            deleteButton.textContent = 'Excluir';
+            deleteButton.title = 'Excluir';
             deleteButton.addEventListener('click', () => remove(page.name));
 
             const previewButton = document.createElement('button');
-            previewButton.className = 'btn btn-soft';
+            previewButton.className = 'btn btn-icon';
+            previewButton.innerHTML = ICONS.preview;
             previewButton.type = 'button';
-            previewButton.textContent = 'Ampliar preview';
+            previewButton.title = 'Ampliar preview';
             previewButton.addEventListener('click', () => openPagePreview(page.name));
 
             actions.appendChild(openLink);
@@ -491,12 +406,9 @@
             actions.appendChild(previewButton);
             actions.appendChild(deleteButton);
 
-            body.appendChild(top);
-            body.appendChild(tags);
-            body.appendChild(actions);
-
-            card.appendChild(body);
-            fragment.appendChild(card);
+            item.appendChild(main);
+            item.appendChild(actions);
+            fragment.appendChild(item);
           });
 
           container.appendChild(fragment);
@@ -550,11 +462,13 @@
           page_name: document.getElementById('page_name').value.trim(),
           folder_name: document.getElementById('folder_name').value.trim(),
         };
-        const btn = e.target.querySelector('button[type=submit]');
-        const originalLabel = btn.textContent;
+        const btn = document.getElementById('generateBtn');
+        const originalLabel = btn.querySelector('span').textContent;
+        const iconContainer = btn.querySelector('svg');
         btn.disabled = true;
-        btn.textContent = 'Enviando...';
-
+        btn.querySelector('span').textContent = 'Enviando...';
+        iconContainer.outerHTML = ICONS.loading;
+ 
         try {
           const res = await fetch('/api/jobs', {
             method: 'POST',
@@ -576,7 +490,8 @@
           alert(err);
         } finally {
           btn.disabled = false;
-          btn.textContent = originalLabel;
+          btn.querySelector('span').textContent = originalLabel;
+          btn.querySelector('svg').outerHTML = `<svg class="icon-add" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z" clip-rule="evenodd"></path></svg>`;
         }
       });
 
@@ -598,66 +513,64 @@
 
           const fragment = document.createDocumentFragment();
           jobs.forEach((job, index) => {
-            const card = document.createElement('article');
-            card.className = 'page-card page-card--job';
-            card.style.setProperty('--delay', index + 'ms');
+            const item = document.createElement('div');
+            item.className = 'item-list__item';
+            item.style.setProperty('--delay', index * 50 + 'ms');
 
             const status = job.status || 'queued';
-            let badgeClass = 'page-card__pill page-card__pill--queued';
-            let extra = 'Fila';
+            let statusText = 'Na fila';
             if (status === 'running') {
-              badgeClass = 'page-card__pill page-card__pill--running';
-              extra = 'Executando';
+              statusText = 'Executando';
             } else if (status === 'success') {
-              badgeClass = 'page-card__pill page-card__pill--success';
-              extra = 'Concluído';
+              statusText = 'Concluído';
             } else if (status === 'failed') {
-              badgeClass = 'page-card__pill page-card__pill--failed';
-              extra = 'Falhou';
+              statusText = 'Falhou';
             }
 
-            const top = document.createElement('div');
-            top.className = 'page-card__top';
+            const main = document.createElement('div');
+            main.className = 'item-list__main';
 
-            const content = document.createElement('div');
-            const title = document.createElement('div');
-            title.className = 'page-card__title';
+            const title = document.createElement('strong');
+            title.className = 'item-list__title';
             title.textContent = job.page_name || job.folder_name || 'Job sem nome';
-            const meta = document.createElement('div');
-            meta.className = 'page-card__meta';
-            meta.textContent = formatDate(job.created_at);
-            content.appendChild(title);
-            content.appendChild(meta);
 
-            const badge = document.createElement('span');
-            badge.className = badgeClass;
-            badge.textContent = extra;
-            top.appendChild(content);
-            top.appendChild(badge);
+            const meta = document.createElement('span');
+            meta.className = 'item-list__meta';
+            meta.textContent = `Criado em ${formatDate(job.created_at)}`;
+
+            main.appendChild(title);
+            main.appendChild(meta);
+
+            const statusPill = document.createElement('div');
+            statusPill.className = `item-list__status status--${status}`;
+            statusPill.textContent = statusText;
 
             const actions = document.createElement('div');
-            actions.className = 'page-card__actions';
+            actions.className = 'item-list__actions';
 
             if (job.folder) {
               const openLink = document.createElement('a');
-              openLink.className = 'btn btn-secondary';
+              openLink.className = 'btn btn-icon';
+              openLink.innerHTML = ICONS.open;
               openLink.href = '/site/' + encodeURIComponent(job.folder) + '/index.html';
               openLink.target = '_blank';
               openLink.rel = 'noopener noreferrer';
-              openLink.textContent = 'Abrir';
+              openLink.title = 'Abrir página gerada';
               actions.appendChild(openLink);
             }
 
             const detailsButton = document.createElement('button');
-            detailsButton.className = 'btn btn-soft';
+            detailsButton.className = 'btn btn-icon';
+            detailsButton.innerHTML = ICONS.details;
             detailsButton.type = 'button';
-            detailsButton.textContent = 'Detalhes';
+            detailsButton.title = 'Ver detalhes do Job';
             detailsButton.addEventListener('click', () => showJobDetails(job.id));
             actions.appendChild(detailsButton);
 
-            card.appendChild(top);
-            card.appendChild(actions);
-            fragment.appendChild(card);
+            item.appendChild(main);
+            item.appendChild(statusPill);
+            item.appendChild(actions);
+            fragment.appendChild(item);
           });
 
           container.appendChild(fragment);
@@ -668,7 +581,7 @@
           const container = document.getElementById('jobs');
           setEmptyState(container, 'Não foi possível carregar os jobs', 'Tente atualizar o painel em instantes.');
           updatePanelMeta({ ok: false });
-          return [];
+          return null;
         }
       }
 
@@ -679,18 +592,40 @@
       }
 
       async function refreshJobsOnly() {
-        connectionStateEl.textContent = 'Sincronizando';
+        connectionStateEl.classList.add('syncing');
         const jobs = await loadJobs();
+        if (jobs === null) { // If loadJobs failed, it returns null. Stop here.
+          connectionStateEl.classList.remove('syncing');
+          return;
+        }
         const activeSignature = jobs.map((job) => job.id).sort().join('|');
         if (activeSignature !== lastActiveJobsSignature) {
           lastActiveJobsSignature = activeSignature;
-          await loadPages();
+          await loadPages(); // Ensure this is awaited
         }
         updatePanelMeta({ ok: true });
+        connectionStateEl.classList.remove('syncing');
+      }
+
+      async function checkApiHealth() {
+        try {
+          // A simple GET to a known endpoint to see if the backend is alive.
+          const res = await fetch('/api/pages?limit=1');
+          if (!res.ok) throw new Error('API health check failed');
+          return true;
+        } catch (error) {
+          console.error("API health check failed:", error);
+          const currentUrl = window.location.href;
+          const likelyCorrectUrl = `${window.location.protocol}//${window.location.hostname}:8000`;
+          const errorMessage = `<div class="empty-state" style="height: 100vh; background: var(--color-bg); text-align: left; max-width: 600px; margin: auto; align-items: flex-start;"><strong>Erro de Conexão com a API</strong><p>O painel não conseguiu se comunicar com o servidor Python.</p><p>Parece que você está acessando a partir de <code>${currentUrl}</code>, que provavelmente é um servidor de arquivos estáticos (como o Live Server) e não a aplicação completa.</p><hr style="border-color: var(--color-border); margin: 1rem 0;"><p><strong>Para corrigir:</strong></p><ol style="padding-left: 1.5rem;"><li>No terminal, execute o comando <code>python web.py</code>.</li><li>Acesse a aplicação pela URL correta, que provavelmente é: <a href="${likelyCorrectUrl}">${likelyCorrectUrl}</a></li></ol></div>`;
+          document.body.innerHTML = errorMessage;
+          return false;
+        }
       }
 
       // Initial Load
-      document.addEventListener('DOMContentLoaded', () => {
+      document.addEventListener('DOMContentLoaded', async () => {
+        if (!await checkApiHealth()) return;
         renderWebhooks();
         updatePreview();
         loadPages();
@@ -698,13 +633,69 @@
         setInterval(refreshJobsOnly, 6000);
       });
 
-      document.getElementById('refreshBtn').addEventListener('click', async () => {
+      // --- Mobile Navigation & Form Management ---
+      const sidebarAside = document.querySelector('aside.sidebar'); // The original sidebar element
+      const mobileGenerateFormParent = document.getElementById('mobileGenerateFormContainer'); // The mobile view container
+      const generateFormSection = document.getElementById('desktopGenerateFormContainer'); // The section containing the form
+
+      const mediaQuery = window.matchMedia('(max-width: 768px)');
+
+      function handleMediaQueryChange(e) {
+        if (e.matches) {
+          // Mobile view: move form section to mobile container
+          if (generateFormSection && mobileGenerateFormParent) {
+            mobileGenerateFormParent.appendChild(generateFormSection);
+            generateFormSection.classList.add('panel'); // Add panel styling for mobile view
+          }
+        } else {
+          // Desktop view: move form section back to sidebar
+          if (generateFormSection && sidebarAside) {
+            // Find the correct insertion point in the sidebar
+            // It should be after sidebar__header and before sidebar__footer
+            const sidebarFooter = sidebarAside.querySelector('.sidebar__footer');
+            if (sidebarFooter) {
+              sidebarAside.insertBefore(generateFormSection, sidebarFooter);
+            } else {
+              sidebarAside.appendChild(generateFormSection);
+            }
+            generateFormSection.classList.remove('panel'); // Remove panel styling for desktop sidebar
+          }
+        }
+      }
+
+      // --- Mobile Navigation ---
+      function setupMobileNav() {
+        const navButtons = document.querySelectorAll('.mobile-nav__btn');
+        const views = document.querySelectorAll('.view');
+        navButtons.forEach(btn => {
+          btn.addEventListener('click', () => {
+            const viewId = btn.dataset.view === 'generate' ? 'mobileGenerateFormContainer' : `view-${btn.dataset.view}`;
+            navButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            views.forEach(v => v.classList.remove('active'));
+            document.getElementById(viewId)?.classList.add('active');
+          });
+        });
+
+        // Initial call to set form position
+        handleMediaQueryChange(mediaQuery);
+        // Listen for changes
+        mediaQuery.addEventListener('change', handleMediaQueryChange);
+      }
+
+      refreshBtn.addEventListener('click', async () => {
+        refreshBtn.toggleAttribute('data-loading', true);
+        connectionStateEl.classList.add('syncing');
         await loadJobs();
         await loadPages();
         lastActiveJobsSignature = document.getElementById('jobs').dataset.activeSignature || '';
         updatePanelMeta({ ok: true });
       });
 
+      document.addEventListener('fetch-end', () => {
+        refreshBtn.toggleAttribute('data-loading', false);
+        connectionStateEl.classList.remove('syncing');
+      });
     </script>
   </body>
 </html>

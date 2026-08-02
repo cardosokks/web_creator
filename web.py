@@ -17,6 +17,8 @@ app = Flask(__name__, template_folder="templates", static_folder="static")
 # Jobs
 JOBS_DIR = BASE_DIR / "jobs"
 JOBS_DIR.mkdir(parents=True, exist_ok=True)
+FINISHED_JOBS_DIR = JOBS_DIR / "finished"
+FINISHED_JOBS_DIR.mkdir(parents=True, exist_ok=True)
 job_queue = queue.Queue()
 
 
@@ -30,10 +32,14 @@ def _write_job(job: dict):
 
 
 def _read_job(job_id: str) -> dict:
-    p = _job_path(job_id)
-    if not p.exists():
-        return None
-    return json.loads(p.read_text(encoding="utf-8"))
+    # Check active jobs first, then finished jobs
+    active_path = _job_path(job_id)
+    finished_path = FINISHED_JOBS_DIR / f"{job_id}.json"
+    if active_path.exists():
+        return json.loads(active_path.read_text(encoding="utf-8"))
+    if finished_path.exists():
+        return json.loads(finished_path.read_text(encoding="utf-8"))
+    return None
 
 
 def _unique_folder_path(base_name: str) -> Path:
@@ -60,21 +66,25 @@ def _write_generation_log(folder_path: Path, *, source: str, url: str, query: st
         "folder_name": folder_path.name,
         "job_id": job_id,
         "created_at": int(time.time()),
-        "html_size": len(html),
+        "html_size": len(html or ""),
     }
     (folder_path / "log.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def _load_and_queue_existing_jobs():
+    """
+    On startup, find any jobs that were 'queued' or 'running' and
+    re-queue them for processing. This handles server restarts.
+    """
+    print(">>> Loading and re-queuing existing jobs...")
     for f in JOBS_DIR.glob("*.json"):
         try:
             job = json.loads(f.read_text(encoding="utf-8"))
             if job.get("status") in ("queued", "running"):
-                job["status"] = "queued"
-                _write_job(job)
                 job_queue.put(job)
-        except Exception:
-            continue
+                print(f"    - Re-queued job {job['id']}")
+        except Exception as e:
+            print(f"    - Could not load job file {f.name}: {e}")
 
 
 def _worker():
@@ -90,11 +100,12 @@ def _worker():
             _write_job(job)
 
             session = requests.Session()
-            resp = session.get(job["url"], params={"query": job.get("query", "")}, headers=build_browser_headers(job["url"]), timeout=(30, 240))
+            resp = session.get(job["url"], params={"query": job.get("query", "")}, headers=build_browser_headers(job["url"]), timeout=(30, 600))
             resp.raise_for_status()
-            html = resp.text or ""
-            if not html.strip():
-                raise ValueError("webhook returned no HTML")
+            html = (resp.text or "").strip()
+            is_html = html.lower().lstrip().startswith(('<!doctype html', '<html'))
+            if not html or not is_html:
+                raise ValueError(f"Webhook returned invalid or empty HTML. Response: {html[:200]}")
 
             if job.get("folder_name"):
                 base = sanitize_folder_name(job.get("folder_name"))
@@ -120,13 +131,17 @@ def _worker():
             job["status"] = "success"
             job["folder"] = folder_path.name
             job["finished_at"] = int(time.time())
-            _write_job(job)
         except Exception as e:
             job["status"] = "failed"
             job["error"] = str(e)
             job["finished_at"] = int(time.time())
-            _write_job(job)
         finally:
+            _write_job(job)  # Write the final state (success or failed)
+            # Move finished/failed job to the archive directory
+            try:
+                shutil.move(_job_path(job_id), FINISHED_JOBS_DIR / f"{job_id}.json")
+            except Exception as move_error:
+                print(f"Error moving job {job_id} to finished folder: {move_error}")
             job_queue.task_done()
 
 
@@ -147,8 +162,7 @@ def safe_folder_path(name: str) -> Path:
 @app.route("/")
 def index():
     return render_template(
-        "index.html",
-        default_webhook_url=os.getenv("DEFAULT_WEBHOOK_URL", "http://krokante:88/webhook/generate_page"),
+        "index.html", default_webhook_url=os.getenv("DEFAULT_WEBHOOK_URL", "http://krokante:9090/webhook/generate_page")
     )
 
 
@@ -176,21 +190,21 @@ def api_jobs():
         }
         _write_job(job)
         job_queue.put(job)
-        return jsonify({"ok": True, "job": job}), 202
+        return jsonify({"ok": True, "job": job}), 201
 
     # GET: list jobs
     status_filter = (request.args.get("status") or "active").strip().lower()
+    
+    # Active jobs are read from the main jobs directory
     jobs = []
     for f in JOBS_DIR.glob("*.json"):
         try:
             j = json.loads(f.read_text(encoding="utf-8"))
-            jobs.append(j)
+            if j.get("status") in ("queued", "running"):
+                jobs.append(j)
         except Exception:
             continue
-    if status_filter == "active":
-        jobs = [j for j in jobs if j.get("status") in ("queued", "running")]
-    elif status_filter == "finished":
-        jobs = [j for j in jobs if j.get("status") in ("success", "failed")]
+
     jobs.sort(key=lambda x: x.get("created_at", 0), reverse=True)
     return jsonify(jobs)
 
@@ -315,8 +329,13 @@ def api_rename():
 
 
 if __name__ == "__main__":
+    port = int(os.getenv("PORT", "8000"))
+    print("=" * 50)
+    print(">>> Servidor de Páginas Iniciado <<<")
+    print(f">>> Acesse o painel em: http://127.0.0.1:{port}")
+    print("=" * 50)
     app.run(
         host="0.0.0.0",
-        port=int(os.getenv("PORT", "8000")),
+        port=port,
         debug=os.getenv("FLASK_DEBUG", "0") == "1",
     )

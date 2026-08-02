@@ -1,6 +1,5 @@
 import os
 import json
-import re
 import shutil
 import threading
 from datetime import datetime
@@ -8,45 +7,8 @@ from pathlib import Path
 from tkinter import messagebox, simpledialog
 import tkinter as tk
 from tkinter import ttk
-
 import requests
-
-
-BASE_DIR = Path(os.getenv("DATA_DIR", "paginas_geradas"))
-BASE_DIR.mkdir(parents=True, exist_ok=True)
-
-CHROME_USER_AGENT = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
-)
-
-
-def sanitize_folder_name(value):
-    cleaned = re.sub(r"[^a-zA-Z0-9_-]+", "_", value.strip())
-    cleaned = cleaned.strip("_")
-    return cleaned or "pagina"
-
-
-def open_file(path):
-    os.startfile(str(path))
-
-
-def build_browser_headers(url_base):
-    origin = re.sub(r"^(https?://[^/]+).*$", r"\1", url_base.strip())
-    return {
-        "User-Agent": CHROME_USER_AGENT,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
-        "Upgrade-Insecure-Requests": "1",
-        "Sec-Fetch-Dest": "document",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "same-origin",
-        "Sec-Fetch-User": "?1",
-        "Origin": origin,
-        "Referer": origin + "/",
-    }
+from core import BASE_DIR, sanitize_folder_name, build_browser_headers, open_file
 
 
 def unique_folder_path(base_name):
@@ -63,13 +25,15 @@ def unique_folder_path(base_name):
         suffix += 1
 
 
-def write_generation_log(folder_path, *, url, query, page_name, html_content):
+def write_generation_log(folder_path, *, url, query, page_name, folder_name, html_content):
     payload = {
         "source": "desktop_app",
         "url": url,
         "query": query,
         "page_name": page_name,
+        "requested_folder_name": folder_name,
         "folder_name": folder_path.name,
+        "job_id": None,
         "created_at": int(datetime.now().timestamp()),
         "html_size": len(html_content),
     }
@@ -158,7 +122,7 @@ class App(tk.Tk):
 
         ttk.Label(generate_frame, text="URL do webhook:").grid(row=0, column=0, sticky=tk.W, pady=5)
         self.url_entry = ttk.Entry(generate_frame)
-        self.url_entry.insert(0, "http://krokante:88/webhook/generate_page")
+        self.url_entry.insert(0, "http://krokante:9090/webhook/generate_page")
         self.url_entry.grid(row=0, column=1, sticky="ew", padx=(8, 0), pady=5)
 
         ttk.Label(generate_frame, text="Prompt / query:").grid(row=1, column=0, sticky=tk.W, pady=5)
@@ -220,11 +184,10 @@ class App(tk.Tk):
             response.raise_for_status()
 
             html_content = response.text.strip()
-            if not html_content:
-                raise ValueError("O webhook respondeu sem conteúdo HTML.")
-
-            if "quota" in html_content.lower():
-                raise ValueError("O webhook devolveu uma mensagem de quota em vez do HTML.")
+            is_html = html_content.lower().lstrip().startswith(('<!doctype html', '<html'))
+            if not html_content or not is_html:
+                error_message = f"O webhook respondeu sem um HTML válido.\n\nResposta recebida:\n{html_content[:200]}"
+                raise ValueError(error_message)
 
             folder_base = sanitize_folder_name(page_name) if page_name else "projeto"
             folder_path = unique_folder_path(folder_base)
@@ -237,6 +200,7 @@ class App(tk.Tk):
                 url=url_base,
                 query=query,
                 page_name=page_name,
+                folder_name=page_name, # In desktop app, page_name is used as folder_name
                 html_content=html_content,
             )
 
