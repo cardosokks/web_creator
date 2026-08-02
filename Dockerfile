@@ -1,20 +1,25 @@
-FROM python:3.11-slim
-
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PORT=8000 \
-    DATA_DIR=/data/paginas_geradas \
-    DEFAULT_WEBHOOK_URL=http://seu-webhook:porta/webhook/generate_page
+# --- Build Stage ---
+FROM python:3.10-slim as builder
 
 WORKDIR /app
 
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+COPY requirements.txt .
+RUN pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements.txt
+
+
+# --- Final Stage ---
+FROM python:3.10-slim
+
+WORKDIR /app
+
+COPY --from=builder /app/wheels /wheels
+COPY requirements.txt .
+RUN pip install --no-cache /wheels/*
 
 COPY . .
 
-RUN mkdir -p /data/paginas_geradas
-
 EXPOSE 8000
-
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT} --workers 2 --threads 4 --timeout 300 web:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "web:app"]

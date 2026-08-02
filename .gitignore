@@ -1,8 +1,4 @@
+# Python virtual environment
 .env/
-__pycache__/
-.pytest_cache/
 paginas_geradas/
-*.pyc
-*.pyo
-*.pyd
-*.log
+__pycache__/
